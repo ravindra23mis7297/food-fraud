@@ -580,45 +580,47 @@
   // Main: Send images to Flask backend
   // ─────────────────────────────────────────
   async function verifyComplaint() {
-    const beforeFile = document.getElementById('before_image').files[0];
-    const afterFile  = document.getElementById('after_image').files[0];
+  const beforeFile = document.getElementById('before_image').files[0];
+  const afterFile  = document.getElementById('after_image').files[0];
 
-    // Hide previous results / errors
-    document.getElementById('result-panel').style.display = 'none';
-    document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
 
-    // Show loading state
-    setLoading(true);
+  setLoading(true);
 
+  try {
+    const formData = new FormData();
+    formData.append('before_image', beforeFile);
+    formData.append('after_image', afterFile);
+
+    const response = await fetch('/compare', {
+      method: 'POST',
+      body: formData
+    });
+
+    // 🔥 CRASH FIX
+    const text = await response.text();
+
+    let data;
     try {
-      // Build FormData with both images
-      const formData = new FormData();
-      formData.append('before_image', beforeFile);
-      formData.append('after_image',  afterFile);
-
-      // POST to Flask /compare endpoint
-      const response = await fetch('/compare', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      // Handle backend errors
-      if (!response.ok || data.error) {
-        showError(data.error || 'Server error. Please try again.');
-        return;
-      }
-
-      // Display results
-      displayResult(data.similarity, data.result);
-
-    } catch (err) {
-      showError('Network error: ' + err.message);
-    } finally {
-      setLoading(false);
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid server response");
     }
+
+    if (!response.ok || data.error) {
+      showError(data.error || 'Server error');
+      return;
+    }
+
+    displayResult(data.similarity, data.result);
+
+  } catch (err) {
+    showError('Network error: ' + err.message);
+  } finally {
+    setLoading(false);
   }
+}
 
   // ─────────────────────────────────────────
   // Toggle loading state on button
